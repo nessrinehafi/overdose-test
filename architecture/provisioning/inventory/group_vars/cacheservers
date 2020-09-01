@@ -1,0 +1,13 @@
+# Vars for ansible-basicserver
+extra_packages_cacheservers: []
+
+# Vars for ansible-redis
+redis_setting_databases: 2
+
+# Persistence for cache: save to the disk every 2 hours
+redis_setting_save_cache:
+  - 7200 1
+
+# Persistence for session: save to the disk every 5 minutes
+redis_setting_save_session:
+  - 300 1

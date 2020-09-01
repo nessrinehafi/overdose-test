@@ -1,0 +1,48 @@
+[proxyservers-staging]
+staging-server ansible_ssh_host="{{ magento_project_name }}-staging.eqx.intranet"
+
+[webservers-staging-main]
+staging-server ansible_ssh_host="{{ magento_project_name }}-staging.eqx.intranet"
+
+[webservers-staging-others]
+
+[dbservers-staging]
+staging-server ansible_ssh_host="{{ magento_project_name }}-staging.eqx.intranet"
+
+[cacheservers-staging]
+staging-server ansible_ssh_host="{{ magento_project_name }}-staging.eqx.intranet"
+
+[searchservers-staging]
+staging-server ansible_ssh_host="{{ magento_project_name }}-staging.eqx.intranet"
+
+[proxyservers:children]
+proxyservers-staging
+
+[webservers-staging:children]
+webservers-staging-main
+webservers-staging-others
+
+[webservers-main:children]
+webservers-staging-main
+
+[webservers-others:children]
+webservers-staging-others
+
+[webservers:children]
+webservers-staging
+
+[cacheservers:children]
+cacheservers-staging
+
+[dbservers:children]
+dbservers-staging
+
+[searchservers:children]
+searchservers-staging
+
+[staging:children]
+proxyservers-staging
+webservers-staging
+cacheservers-staging
+dbservers-staging
+searchservers-staging

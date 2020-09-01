@@ -1,0 +1,15 @@
+- name: "Register NFS shared folder"
+  stat:
+    path: "{{ nfs_mount_point }}/{{ nfs_shared_folder_name }}"
+  register: nfs_shared_folder
+
+- name: "Check NFS folder"
+  fail:
+    msg: "Ask your sysadmin to provision again and give you writable permissions on {{ nfs_data_folder }}"
+  when: not nfs_shared_folder.stat.exists or not nfs_shared_folder.stat.writeable
+
+# Create the shared folders on NFS
+- include_tasks: deploy-shared-on-nfs-tasks.yml
+  args:
+    nfs_folder: "{{ nfs_shared_folder.stat.path }}"
+  with_items: "{{ shared_on_nfs|default([]) }}"

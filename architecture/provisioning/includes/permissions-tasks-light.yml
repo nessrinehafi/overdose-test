@@ -1,0 +1,82 @@
+- name: "Check if Magento root folder exists"
+  stat:
+    path: "{{ magento_project_path }}"
+  register: project_path
+
+- name: "Set execution mode to scripts"
+  file:
+    path: "{{ item }}"
+    recurse: yes
+    state: directory
+    mode: "u+x,g+x"
+  with_items:
+    - "{{ magento_project_path }}/bin"
+    - "{{ magento_project_path }}/scripts"
+  when: project_path.stat.exists
+
+- name: "Check if Magento sources exists"
+  stat:
+    path: "{{ magento_source_path }}/bin/magento"
+  register: src
+
+- name: "Set execution mode to Magento binary"
+  file:
+    path: "{{ magento_source_path }}/bin/magento"
+    mode: "a+x"
+  when: src.stat.exists
+
+- name: "Fix permissions for app/etc folder"
+  file:
+    path: "{{ magento_source_path }}/app/etc"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    state: directory
+    recurse: yes
+    follow: yes
+    mode: "g+w"
+  when: src.stat.exists
+  failed_when: false
+
+- name: "Fix permissions for pub/media folder"
+  file:
+    path: "{{ magento_source_path }}/pub/media"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    state: directory
+    recurse: no
+    follow: yes
+    mode: "g+w"
+  when: src.stat.exists
+
+- name: "Fix permissions for pub/static folder"
+  file:
+    path: "{{ magento_source_path }}/pub/static"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    state: directory
+    recurse: no
+    follow: yes
+    mode: "g+w"
+  when: src.stat.exists
+
+- name: "Fix permissions for var folder"
+  file:
+    path: "{{ magento_source_path }}/var"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    state: directory
+    recurse: no
+    follow: yes
+    mode: "g+w"
+  when: src.stat.exists
+
+- name: "Fix permissions for generated folder"
+  file:
+    path: "{{ magento_source_path }}/generated"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    state: directory
+    recurse: no
+    follow: yes
+    mode: "g+w"
+  when: src.stat.exists and (magento_version is version_compare('2.2.0', '>='))

@@ -1,0 +1,21 @@
+---
+- hosts: webservers-main
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+    - name: "Execute Magento Shell with [{{ magento_params }}] params"
+      become: yes
+      become_method: sudo
+      become_user: "{{ magento_webserver_user }}"
+      shell: "{{ php_path }} {{ magento_source_path }}/bin/magento {{ magento_params }}"
+      register: result
+      args:
+        chdir: "{{ magento_source_path }}"
+
+    - name: "Execute Magento Shell - result"
+      debug:
+        var: "result.stdout_lines  + [ result.stderr ]"

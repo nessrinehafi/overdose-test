@@ -1,0 +1,21 @@
+- name: "Check Magento setup"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "{{ php_path }} bin/magento setup:db:status | grep 'setup:upgrade'"
+  args:
+    chdir: "{{ magento_source_path }}"
+  register: magento_setup
+  changed_when: false
+  failed_when: false
+
+- name: "Check Smile setup"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "{{ php_path }} bin/magento smilesetup:status | grep 'There is new setup files'"
+  args:
+    chdir: "{{ magento_source_path }}"
+  register: smile_setup
+  changed_when: false
+  failed_when: false

@@ -1,0 +1,35 @@
+- name: "Clear Magento cache"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  command: "{{ php_path }} bin/magento cache:clean"
+  run_once: true
+  delegate_to: "{{ groups['webservers-main'][0] }}"
+  args:
+    chdir: "{{ magento_source_path }}"
+
+- name: "Clear Magento DI and Generation (< 2.0)"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "rm -rf var/di/* var/generation/*"
+  args:
+    chdir: "{{ magento_source_path }}"
+  when: magento_mode != "production" and (magento_version is version_compare('2.2.0', '<'))
+
+- name: "Clear Magento DI and Generation (>= 2.2)"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "rm -rf generated/*"
+  args:
+    chdir: "{{ magento_source_path }}"
+  when: magento_mode != "production" and (magento_version is version_compare('2.2.0', '>='))
+
+- name: "Clear Static Cached Files"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "rm -rf pub/static/_cache/*"
+  args:
+    chdir: "{{ magento_source_path }}"

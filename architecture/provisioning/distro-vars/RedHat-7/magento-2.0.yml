@@ -1,0 +1,31 @@
+---
+# Vars for dbservers
+mysql_version: "5.7"
+mysql_flavor: percona
+mysql_log_slow_verbosity: "full"
+
+# Vars for searchservers
+es_java_version: 8
+
+# Vars for webservers
+ssl_default_certificate_key_file: "/etc/pki/tls/private/localhost.key"
+ssl_default_certificate_file:     "/etc/pki/tls/certs/localhost.crt"
+varnish_use_repo:     "4.1"
+varnish_main_version: "4"
+http_service_name: "httpd"
+http_user_name:    "apache"
+http_group_name:   "apache"
+php_ver:           "7.0"
+php_path:          "/opt/rh/rh-php70/root/usr/bin/php"
+php_service_name:  "rh-php70-php-fpm"
+php_scl_version:   "7.0"
+php_extra_packages_required:
+  - http://mirror.centos.org/centos/7/sclo/x86_64/sclo/sclo-php70/sclo-php70-php-pecl-igbinary-2.0.8-1.el7.x86_64.rpm
+  - http://mirror.centos.org/centos/7/sclo/x86_64/sclo/sclo-php70/sclo-php70-php-pecl-redis-3.1.6-1.el7.x86_64.rpm
+  - http://mirror.centos.org/centos/7/sclo/x86_64/sclo/sclo-php70/sclo-php70-php-mcrypt-7.0.27-1.el7.x86_64.rpm
+php_extra_packages_debug:
+  - http://mirror.centos.org/centos/7/sclo/x86_64/sclo/sclo-php70/sclo-php70-php-pecl-xdebug-2.6.1-1.el7.x86_64.rpm
+redis_cli_package: "rh-redis32-redis"
+
+# Vars for ansible-npm
+nodejs_version: "10.16.3"

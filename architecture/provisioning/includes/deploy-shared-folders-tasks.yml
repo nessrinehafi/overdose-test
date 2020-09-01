@@ -1,0 +1,30 @@
+# Look at if the media folder exists in the release folder
+- name: "Init Media 1/4 - Check if the release media folder exists"
+  stat:
+    path: "{{ deploy_helper.new_release_path }}/pub/media"
+  register: release_pub_media
+
+# Look at if the media folder exists in the shared folder
+- name: "Init Media 2/4 - Check if the shared media folder exists"
+  stat:
+    path: "{{ deploy_helper.shared_path }}/pub/media"
+  register: shared_pub_media
+
+# If the media folder does not exist in the shared folder, create it
+- name: "Init Media 3/4 - Create the shared media folder if not exist"
+  file:
+    path: "{{ deploy_helper.shared_path }}/pub/media"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    state: directory
+    mode: "u=rwX,g=rwX,o=rX"
+  when: release_pub_media.stat.exists and not shared_pub_media.stat.exists
+
+# If the media folder does not exist in the shared folder, init it from the release
+- name: "Init Media 4/4 - Init the shared media folder from the release media folder"
+  shell: "cp -r {{ deploy_helper.new_release_path }}/pub/media {{ deploy_helper.shared_path }}/pub/"
+  when: release_pub_media.stat.exists and not shared_pub_media.stat.exists
+
+# Create all the shared folders
+- include_tasks: deploy-shared-folder-tasks.yml
+  with_items: "{{ deploy_shared_folders|default([]) }}"

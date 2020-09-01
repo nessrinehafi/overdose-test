@@ -1,0 +1,9 @@
+---
+- hosts: webservers
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+    - include_tasks: includes/generate-static-di-tasks.yml

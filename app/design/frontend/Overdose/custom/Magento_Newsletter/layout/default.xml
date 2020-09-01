@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="page.wrapper">
+            <container name="newsletter.subscribe.modal" htmlTag="div" htmlClass="newsletter-subscribe-modal" after="-">
+                <block class="Magento\Cms\Block\Block" name="newsletter.subscribe.modal.block" as="newsletter_subscribe_modal_block">
+                    <arguments>
+                        <argument name="block_id" xsi:type="string">newsletter_subscribe_modal</argument>
+                    </arguments>
+                </block>
+                <block class="Magento\Newsletter\Block\Subscribe" name="form.subscribe.modal" as="subscribe" after="-"
+                       template="Magento_Newsletter::subscribe-modal.phtml" ifconfig="newsletter/general/active"/>
+            </container>
+        </referenceContainer>
+    </body>
+</page>

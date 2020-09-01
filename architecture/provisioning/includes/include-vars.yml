@@ -1,0 +1,30 @@
+# Determine the environment by Magento version
+- set_fact:
+    magento_target_env: "magento-2.0"
+  when: magento_version is version_compare('2.1.0', '<')
+
+- set_fact:
+    magento_target_env: "magento-2.1-2.2"
+  when: magento_version is version_compare('2.1.0', '>=') and magento_version is version_compare('2.3.0', '<')
+
+- set_fact:
+    magento_target_env: "magento-2.3"
+  when: magento_version is version_compare('2.3.0', '>=')
+
+# Include per-environment variables
+- include_vars: '{{ item }}'
+  with_first_found:
+    - files:
+        - '{{ ansible_distribution }}-{{ ansible_distribution_version }}/{{ magento_target_env }}.yml'        # CentOS-7.6/magento-2.3.yml
+        - '{{ ansible_os_family }}-{{ ansible_distribution_version }}/{{ magento_target_env }}.yml'           # RedHat-7.6/magento-2.3.yml
+        - '{{ ansible_distribution }}-{{ ansible_distribution_major_version }}/{{ magento_target_env }}.yml'  # CentOS-7/magento-2.3.yml
+        - '{{ ansible_os_family }}-{{ ansible_distribution_major_version }}/{{ magento_target_env }}.yml'     # RedHat-7/magento-2.3.yml
+        - '{{ ansible_distribution }}/{{ magento_target_env }}.yml'                                           # CentOS.yml/magento-2.3.yml
+        - '{{ ansible_os_family }}/{{ magento_target_env }}.yml'                                              # RedHat.yml/magento-2.3.yml
+        - '{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml'                                 # CentOS-7.6.yml
+        - '{{ ansible_os_family }}-{{ ansible_distribution_version }}.yml'                                    # RedHat-7.6.yml
+        - '{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml'                           # CentOS-7.yml
+        - '{{ ansible_os_family }}-{{ ansible_distribution_major_version }}.yml'                              # RedHat-7.yml
+        - '{{ ansible_distribution }}.yml'                                                                    # CentOS.yml
+        - '{{ ansible_os_family }}.yml'                                                                       # RedHat.yml
+      paths: './distro-vars'

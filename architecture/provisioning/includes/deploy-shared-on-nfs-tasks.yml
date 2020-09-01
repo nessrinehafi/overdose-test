@@ -1,0 +1,40 @@
+- block:
+  - name: "{{ item }} - Prepare Vars 1/6"
+    set_fact:
+      item_path: "{{ item }}"
+
+  - name: "{{ item_path }} - Check if path already exists in the shared folder 2/6"
+    stat:
+      path: "{{ deploy_helper.shared_path }}/{{ item_path }}"
+    register: shared_shared_item
+
+  - name: "{{ item_path }} - Check if path already exists in the NFS folder 3/6"
+    stat:
+      path: "{{ nfs_folder }}/{{ item_path }}"
+    register: nfs_shared_item
+
+  - name: "{{ item_path }} - Prepare path in the shared folder 4/6"
+    file:
+      path: "{{ nfs_folder }}/{{ item_path | dirname }}"
+      mode: 0775
+      state: directory
+    when: not nfs_shared_item.stat.exists and shared_shared_item.stat.exists and not shared_shared_item.stat.islnk
+
+  - name: "{{ item_path }} - Move file to NFS 5/6"
+    command: "mv {{ deploy_helper.shared_path }}/{{ item_path }} {{ nfs_folder }}/{{ item_path }}"
+    when: not nfs_shared_item.stat.exists and shared_shared_item.stat.exists and not shared_shared_item.stat.islnk
+    register: moved
+
+  run_once: true
+
+- name: "{{ item_path }} - Remove original file 6/7"
+  file:
+    path: "{{ deploy_helper.shared_path }}/{{ item_path }}"
+    state: absent
+
+- name: "{{ item_path }} - Add symlinks for path from the release folder to the shared folder 7/7"
+  file:
+    src: "{{ nfs_folder }}/{{ item_path }}"
+    dest:  "{{ deploy_helper.shared_path }}/{{ item_path }}"
+    state: link
+  when: nfs_shared_item.stat.exists

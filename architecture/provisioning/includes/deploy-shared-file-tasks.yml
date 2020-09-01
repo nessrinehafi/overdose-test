@@ -1,0 +1,50 @@
+- name: "{{ item.filename }} - Prepare Vars"
+  set_fact:
+    item_path:     "{{ item.filename }}"
+    item_template: "{{ item.template }}"
+
+- name: "{{ item_path }} - Check if path already exists in the release folder"
+  stat:
+    path: "{{ deploy_helper.new_release_path }}/{{ item_path }}"
+  register: release_shared_item
+
+- name: "{{ item_path }} - Check if path already exists in the shared folder"
+  stat:
+    path: "{{ deploy_helper.shared_path }}/{{ item_path }}"
+  register: shared_shared_item
+
+- name: "{{ item_path }} - Prepare path in the shared folder 1-3"
+  file:
+    path:  "{{ deploy_helper.shared_path }}/{{ item_path }}_folder"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    mode:  "u=rwX,g=rwX,o=rX"
+    state: directory
+  when: not shared_shared_item.stat.exists
+
+- name: "{{ item_path }} - Prepare path in the shared folder 2-3"
+  file:
+    path: "{{ deploy_helper.shared_path }}/{{ item_path }}_folder"
+    state: absent
+  when: not shared_shared_item.stat.exists
+
+- name: "{{ item_path }} - Prepare path in the shared folder 3-3"
+  template:
+    src:   "templates/magento/{{ item_template }}"
+    dest:  "{{ deploy_helper.shared_path }}/{{ item_path }}"
+    owner: "{{ magento_project_user }}"
+    group: "{{ magento_webserver_group }}"
+    mode:  "u=rw,g=rw,o=r"
+  when: not shared_shared_item.stat.exists
+
+- name: "{{ item_path }} - Remove path in the release folder"
+  file:
+    path:  "{{ deploy_helper.new_release_path }}/{{ item_path }}"
+    state: absent
+  when: release_shared_item.stat.exists
+
+- name: "{{ item_path }} - Add symlinks for path from the release folder to the shared folder"
+  file:
+    src:  "{{ deploy_helper.shared_path }}/{{ item_path }}"
+    dest: "{{ deploy_helper.new_release_path }}/{{ item_path }}"
+    state: link

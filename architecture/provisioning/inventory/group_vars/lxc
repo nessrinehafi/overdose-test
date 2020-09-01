@@ -1,0 +1,30 @@
+# Vars for Magento
+magento_hostname:          "{{ magento_project_name }}.lxc"
+magento_mode:              "developer"
+magento_cron_every_minutes: 5
+
+# You can enable the profiler if you do not use the Smile Debug Toolbar
+#magento_profiler:          On
+#magento_profiler_type:     html
+
+magento_php_display_errors:     On
+
+magento_install_grunt:      true
+magento_install_maildev:    true
+
+magento_enable_swagger: true
+
+magento_front_list:
+  - "10.0.3.1"
+
+# Vars for ansible-basicserver
+promptcolor: cyan
+
+# Vars for ansible-php
+magento_php_extra_packages:    "{{ php_extra_packages_required + php_extra_packages_debug }}"
+magento_php_extension_modules: "{{ php_extension_modules_required + php_extension_modules_debug }}"
+magento_php_settings_all:      "{{ php_settings_required | combine(php_settings_debug) }}"
+
+# Vars for ansible-mysql
+magento_mysql_config_innodb_buffer_pool_size: 512M
+magento_mysql_use_binlog: 0

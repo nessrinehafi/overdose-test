@@ -1,0 +1,22 @@
+# Vars for Magento
+magento_hostname:          "{{ magento_project_name }}.vitry.intranet"
+magento_project_path:      "{{ magento_delivery_path }}/current"
+magento_source_path:       "{{ magento_project_path }}"
+magento_mode:              "production"
+magento_cron_every_minutes: 5
+
+magento_php_display_errors:     On
+
+magento_install_maildev:    true
+
+# Vars for ansible-basicserver
+promptcolor: yellow
+
+# List authorized users for delivery
+delivery_authorized_jenkins_users:
+  - ci-jenkins
+delivery_authorized_users: "{{ delivery_authorized_smile_users + delivery_authorized_jenkins_users }}"
+
+# Vars for ansible-mysql
+magento_mysql_config_innodb_buffer_pool_size: 512M
+magento_mysql_use_binlog: 0

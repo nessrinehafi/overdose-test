@@ -1,0 +1,225 @@
+---
+# Load variables for each server
+- hosts:
+    - dbservers
+    - cacheservers
+    - searchservers
+    - webservers
+    - proxyservers
+  vars:
+    ansible_user: "root"
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+# Prepare the delivery authorized keys
+- hosts:
+    - dbservers
+    - cacheservers
+    - searchservers
+    - webservers
+    - proxyservers
+  connection: local
+
+  vars:
+    ansible_user: "root"
+    tmp_delivery_users:
+      - name:   "{{ magento_project_user }}"
+        group:  "{{ magento_webserver_group }}"
+        authorized_keys: "{{ delivery_authorized_keys }}"
+
+  tasks:
+    - name: "Prepare the list of the authorized keys for delivery - Extra Keys"
+      set_fact: delivery_authorized_keys="{{ delivery_authorized_extra_keys }}"
+
+    - name: "Prepare the list of the authorized keys for delivery - Smile Users"
+      set_fact:
+        delivery_authorized_keys: "{{ delivery_authorized_keys + [ lookup(smile_ssh_key_provider | default('ldapkey'),  item) ] }}"
+      with_items: "{{ delivery_authorized_users }}"
+
+    - name: "Prepare the delivery_users object"
+      set_fact: delivery_users="{{ tmp_delivery_users }}"
+
+# Add hosts alias on servers
+- hosts:
+    - dbservers
+    - cacheservers
+    - searchservers
+    - webservers
+    - proxyservers
+  vars:
+    ansible_user: "root"
+  tasks:
+    - include_tasks: includes/init-hosts.yml
+      with_items: "{{ specific_hosts|default([]) }}"
+
+# Add magento hosts alias on web servers
+- hosts:
+    - webservers
+  vars:
+    ansible_user: "root"
+  tasks:
+    - include_tasks: includes/init-hosts.yml
+      with_items: "{{ magento_server_alias|default([]) }}"
+
+# Generic behaviors on all servers
+- hosts:
+    - dbservers
+    - cacheservers
+    - searchservers
+    - webservers
+    - proxyservers
+  vars:
+    ansible_user: "root"
+  roles:
+    - role: ansible-basicserver
+
+# Generic usage of the ansible roles - DB server
+- hosts: dbservers
+  vars:
+    ansible_user: "root"
+  roles:
+    - role: ansible-mysql-server
+
+# Generic usage of the ansible roles - cache server
+- hosts: cacheservers
+  vars:
+    ansible_user: "root"
+  roles:
+    - {
+        role: ansible-redis,
+        redis_instance_name: "magento_cache",
+        redis_setting_port:  "{{ magento_cache_port }}",
+        redis_setting_save:  "{{ redis_setting_save_cache }}",
+        # Disable cache persistence to avoid disk space and I/O issues
+        redis_setting_appendonly: no
+      }
+    - {
+        role: ansible-redis,
+        redis_instance_name: "magento_session",
+        redis_setting_port:  "{{ magento_cache_session_port }}",
+        redis_setting_save:  "{{ redis_setting_save_session }}"
+      }
+
+# Generic usage of the ansible roles - search server
+- hosts: searchservers
+  vars:
+    ansible_user: "root"
+  roles:
+    - role: ansible-elasticsearch
+
+# Prepare php parameters
+- hosts: webservers
+  vars:
+    ansible_user: "root"
+  tasks:
+    - include_tasks: includes/prepare-php-parameters.yml
+
+# Generic usage of the ansible roles - web server
+- hosts: webservers
+  vars:
+    ansible_user: "root"
+  roles:
+    - role: ansible-php
+    - role: ansible-apache
+
+# Generic usage of the ansible roles - web server
+- hosts: proxyservers
+  vars:
+    ansible_user: "root"
+  pre_tasks:
+    - set_fact:
+        varnish_use_repo: 60
+        varnish_backend_fetch_multi_A: true
+        varnish_backend_director:
+          name: "{{ varnish_backend_name }}"
+          address: "{{ varnish_backend_host }}"
+      when: magento_varnish_backend_type == "dynamic"
+    - set_fact:
+        varnish_understand_proxy_proto: true
+        varnish_use_proxy_proto_version: 1
+      when: magento_stack_use_proxy_proto|bool == true
+  roles:
+    - role: ansible-varnish
+    - { role: ansible-nginx, when: magento_stack_use_nginx_offloader }
+
+# Specific usage of the ansible roles - web server - dev tools
+- hosts: webservers
+  vars:
+    ansible_user: "root"
+  roles:
+    - { role: ansible-npm, when: magento_install_maildev or magento_install_grunt }
+    - { role: ansible-maildev, when: magento_install_maildev }
+
+  tasks:
+  - name: "Install NPM package: grunt-cli"
+    npm: name="grunt-cli" global=yes
+    when: magento_install_grunt
+
+  - name: "Add delivery user in groups"
+    user:
+      name: "{{ magento_project_user }}"
+      groups: "{{ magento_delivery_groups }}"
+
+  - name: "Create {{ magento_delivery_path }} folder"
+    file:
+      path:  "{{ magento_delivery_path }}"
+      state: directory
+      owner: "{{ magento_project_user }}"
+      group: "{{ magento_project_group }}"
+      mode:  "u=rwX,g=rX,o=rX"
+
+  # Specific task for Magento 2
+  - name: "Check if Magento app/etc/env.php exists"
+    stat:
+      path: "{{ magento_source_path }}/app/etc/env.php"
+    register: magento_app_etc_env
+
+  - name: "Update app/etc/env.php configuration file"
+    template:
+      src: "templates/magento/env.php.j2"
+      dest: "{{ magento_source_path }}/app/etc/env.php"
+      owner: "{{ magento_project_user }}"
+      group: "{{ magento_webserver_group }}"
+      mode: "u=rw,g=rw,o=r"
+    vars:
+        magento_cache_database: "{{ magento_cache_database_for_run }}"
+    when: magento_app_etc_env.stat.exists
+
+  - name: "Register nfs mount folder"
+    stat:
+      path: "{{ nfs_mount_point }}"
+    register: nfs_mount_folder
+    when: not nfs_mount_point is none
+
+  - name: Check NFS mount point
+    fail:
+      msg: "Your NFS mount point does not exist or is not writable!"
+    when: not nfs_mount_point is none and (not nfs_mount_folder.stat.exists or not nfs_mount_folder.stat.writeable)
+
+  - name: "Prepare path in NFS shared folder if exists"
+    file:
+      path:  "{{ nfs_mount_point }}/{{ nfs_shared_folder_name }}"
+      owner: "{{ magento_project_user }}"
+      group: "{{ magento_webserver_group }}"
+      mode:  "u=rwX,g=rwX,o=rX"
+      state: directory
+    run_once: true
+    when: not nfs_mount_point is none and nfs_mount_point is exists
+
+  # Update permissions
+  - include_tasks: includes/permissions-tasks-full.yml
+
+  - name: "Add Magento log rotate"
+    template:
+      src: "templates/logrotate/magento.j2"
+      dest: "/etc/logrotate.d/magento"
+      owner: "root"
+      group: "root"
+      mode: "u=rw,g=r,o=r"
+
+# Specific usage of the ansible roles - web server - dev tools
+- hosts: webservers
+  vars:
+    ansible_user: "root"
+  roles:
+    - { role: ansible-newrelic, when: magento_install_newrelic }

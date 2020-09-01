@@ -1,0 +1,59 @@
+{% set document_root_is_pub = 'false' %}
+{% if magento_mode == 'production' %}{% set document_root_is_pub = 'true' %}{% endif %}
+<?php
+return [
+    'db' => [
+    ],
+    'backend' => [
+        'frontName' => '{{ magento_backend_frontname }}',
+    ],
+    'install' => [
+    ],
+    'crypt' => [
+{% if magento_crypt_key %}
+    'key' => '{{ magento_crypt_key }}',
+{% endif %}
+    ],
+    'session' => [
+        'save' => 'redis',
+        'redis' => [
+            'host' => '{{ magento_cache_session_host }}',
+            'port' => '{{ magento_cache_session_port }}',
+            'database' => '{{ magento_cache_session_database }}'
+        ],
+    ],
+    'cache' => [
+        'frontend' => [
+            'default' => [
+                'backend' => 'Cm_Cache_Backend_Redis',
+                'id_prefix' => '{{ magento_cache_id_prefix }}',
+                'backend_options' => [
+                    'server' => '{{ magento_cache_host }}',
+                    'port' => '{{ magento_cache_port }}',
+                    'persistent' => '',
+                    'database' => '{{ magento_cache_database }}',
+                    'force_standalone' => '0',
+                    'connect_retries' => '1',
+                    'read_timeout' => '10',
+                    'automatic_cleaning_factor' => '0',
+                    'compress_data' => '1',
+                    'compress_tags' => '1',
+                    'compress_threshold' => '20480',
+                    'compression_lib' => 'gzip',
+                ],
+            ],
+        ],
+    ],
+    'http_cache_hosts' => [
+{% for host in magento_http_cache_hosts %}
+        [
+            'host' => '{{ host.host }}',
+            'port' => '{{ host.port }}',
+        ],
+{% endfor %}
+    ],
+    'MAGE_MODE' => '{{ magento_mode }}',
+    'directories' => [
+        'document_root_is_pub' => {{ document_root_is_pub }},
+    ],
+];

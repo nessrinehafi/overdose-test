@@ -1,0 +1,58 @@
+@subscribe-modal__text-color: #03264a;
+@subscribe-modal__border-color: #81d5f6;
+
+& when (@media-common = true) {
+    .subscribe-modal-popup {
+        .modal-inner-wrap {
+            border: 5px solid @subscribe-modal__border-color;
+            width: 50%;
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            border: none;
+            color: @subscribe-modal__text-color;
+        }
+    }
+
+    .newsletter-subscribe-modal {
+        display: none;
+
+        .block.newsletter {
+            width: 100%;
+
+            .field {
+                margin: 0 0 15px;
+
+                .control::before {
+                    content: none;
+                }
+            }
+
+            input {
+                height: 40px;
+                padding: 0 0 0 10px;
+            }
+
+            .actions {
+                display: block;
+                text-align: center;
+                width: 100%;
+            }
+
+            .action.subscribe {
+                background-color: @subscribe-modal__text-color;
+                text-transform: uppercase;
+                padding: 15px 25px;
+                font-size: 22px;
+                font-weight: bold;
+            }
+
+            .form.subscribe {
+                display: block;
+            }
+        }
+    }
+}

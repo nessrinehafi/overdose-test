@@ -1,0 +1,48 @@
+# Vars for Magento
+magento_hostname:          "www.{{ magento_project_name }}.com"
+magento_project_path:      "{{ magento_delivery_path }}/current"
+magento_source_path:       "{{ magento_project_path }}"
+magento_mode:              "production"
+magento_db_password:       "generate_password_for_{{ magento_project_name }}"
+magento_backend_frontname: "admin_bo_{{ magento_project_name }}"
+
+# Hosts to prepare in the /etc/hosts file
+specific_hosts:
+  - myproxy1
+  - mybo
+  - myfront1
+  - mydb
+  - myredis
+  - myelasticsearch
+
+magento_front_list:
+  - mybo
+  - myfront1
+
+magento_http_cache_hosts:
+  - host: myproxy1
+    port: 80
+  - host: myproxy2
+    port: 80
+
+# Vars for ansible-basicserver
+promptcolor: red
+
+# Vars for ansible-varnish
+magento_varnish_enable_protection: "bo-only"
+magento_varnish_basic_auth:        "XXXXXXXXXXXXXXXXXXXXXXX="
+magento_varnish_memory_mb:         256
+
+# @to complete, for example, with client IP or IP from payment provider callback
+magento_varnish_client: []
+
+# Vars for ansible-nginx
+magento_ssl_certificate_key_file: "/etc/nginx/ssl/{{ magento_hostname }}.key"
+magento_ssl_certificate_file:     "/etc/nginx/ssl/{{ magento_hostname }}.pem"
+magento_backend_redirect_host:    myfront1
+
+# Vars for ansible-elasticsearch
+magento_es_config_other:
+  network.bind_host:     0
+  bootstrap.memory_lock: "false"
+  path.repo:             "\"/home/backup/local/elastic/\""

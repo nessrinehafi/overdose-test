@@ -1,0 +1,25 @@
+- name: "Prepare parameters"
+  set_fact:
+    static_content_parameters: ""
+
+- name: "Prepare parameters (magento 2.2 only)"
+  set_fact:
+    static_content_parameters: "-f"
+  when: (magento_mode != "production") and (magento_version is version_compare('2.2.0', '>='))
+
+- name: "Generate static files"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "{{ php_path }} bin/magento setup:static-content:deploy --jobs 1 {{ static_content_parameters }} {{ item }} >> {{ magento_deploy_static_content_logs_path }} 2>&1"
+  with_items: "{{ deploy_languages|default([]) }}"
+  args:
+    chdir: "{{ magento_source_path }}"
+
+- name: "Generate DI Configuration"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "{{ php_path }} bin/magento setup:di:compile >> {{ magento_deploy_di_logs_path }} 2>&1"
+  args:
+    chdir: "{{ magento_source_path }}"

@@ -1,0 +1,107 @@
+# Vars for ansible-basicserver
+install_sudoers: true
+sudo_allowed_users:
+  - "{{ magento_webserver_user }}"
+sudo_allowed_root_commands:
+  - "/bin/systemctl status {{ http_service_name }}.service"
+  - "/bin/systemctl reload {{ http_service_name }}.service"
+  - "/bin/systemctl status {{ php_service_name }}.service"
+  - "/bin/systemctl reload {{ php_service_name }}.service"
+extra_packages_webservers:
+  - curl
+  - "{{ redis_cli_package }}"
+
+# Vars for ansible-apache
+apache2_disabled_default:
+  - "default_ssl.conf"
+  - "000-default.conf"
+
+apache2_modules:
+  - headers
+  - deflate
+  - rewrite
+  - expires
+  - remoteip
+
+apache2_modules_specific_conf:
+  - name: remoteip
+    template: templates/apache/remoteip_conf.j2
+
+apache2_port: "{{ magento_webservers_port }}"
+apache2_vhosts:
+  magentovhost:
+    template:               templates/apache/magento_vhost.j2
+    vhost_name:             "{{ magento_project_name }}"
+    server_name:            "{{ magento_hostname }}"
+    server_aliases:         "{{ magento_server_alias }}"
+    document_root:          "{{ magento_source_path }}"
+    create_document_root:   false
+    environment_vars:
+      MAGE_MODE: "{{ magento_mode }}"
+
+# Vars for ansible-php
+php_extension_modules_required:
+  - bcmath
+  - curl
+  - gd
+  - iconv
+  - intl
+  - json
+  - mbstring
+  - mhash
+  - mysql
+  - pdo
+  - pdo-mysql
+  - readline
+  - redis
+  - simplexml
+  - soap
+  - xml
+  - xsl
+  - zip
+
+php_extension_modules_debug:
+  - xdebug
+
+php_settings_required:
+  max_execution_time:               18000
+  memory_limit:                     768M
+  display_errors:                   "{{ magento_php_display_errors }}"
+  error_reporting:                  "{{ magento_php_error_reporting }}"
+  log_errors:                       On
+  date.timezone:                    Europe/Paris
+  session.auto_start:               0
+  always_populate_raw_post_data:    -1
+  opcache.memory_consumption:       256M
+  opcache.max_accelerated_files:    65407
+
+php_settings_debug:
+  xdebug.max_nesting_level: 400
+  xdebug.remote_enable:     1
+  xdebug.remote_port:       9000
+  xdebug.remote_host:       10.0.3.1
+  xdebug.idekey:            PHPSTORM
+
+php_extra_packages:    "{{ magento_php_extra_packages }}"
+php_extension_modules: "{{ magento_php_extension_modules }}"
+php_settings_all:      "{{ magento_php_settings_all }}"
+
+php_settings_apache2:
+  memory_limit:                     768M
+
+php_settings_fpm:
+  memory_limit:                     768M
+
+php_settings_cli:
+  memory_limit:                     2G
+
+php_fpm_pools:
+  magento:
+    pool_name:      "{{ magento_project_name }}"
+    user:           "{{ magento_webserver_user }}"
+    group:          "{{ magento_webserver_group }}"
+    listen_owner:   "{{ magento_webserver_user }}"
+    listen_group:   "{{ magento_webserver_group }}"
+
+php_fpm_pools_disabled_default:
+  - www

@@ -1,0 +1,27 @@
+---
+- hosts: webservers
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+    - include_tasks: includes/permissions-tasks-light.yml
+    - include_tasks: includes/cache-clean-tasks.yml
+
+    - name: "Set up environment configuration file"
+      template:
+        src:   "templates/magento/install-config-mysql.php.j2"
+        dest:  "{{ magento_source_path }}/dev/tests/integration/etc/install-config-mysql.php"
+
+    - name: "Launch Test - Static      (results in ~/report.static.log)"
+      shell: "{{ php_path }} {{ magento_source_path }}/bin/magento dev:tests:run static       > ~/report.static.log"
+      failed_when: false
+
+    - name: "Launch Test - Unit        (results in ~/report.unit.log)"
+      shell: "{{ php_path }} {{ magento_source_path }}/bin/magento dev:tests:run unit         > ~/report.unit.log"
+      failed_when: false
+
+    - name: "Launch Test - Integration (results in ~/report.integration.log)"
+      shell: "{{ php_path }} {{ magento_source_path }}/bin/magento dev:tests:run integration  > ~/report.integration.log"
+      failed_when: false

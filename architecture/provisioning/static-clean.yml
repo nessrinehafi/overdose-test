@@ -1,0 +1,22 @@
+---
+- hosts: webservers
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+    - name: "Test if Magento is in production mode"
+      fail:
+        msg: "Magento is in production mode on the requested environment. Cannot clear static files."
+      when: magento_mode == "production"
+
+    - name: "Empty static files"
+      become: yes
+      become_method: sudo
+      become_user: "{{ magento_webserver_user }}"
+      shell: "rm -rf pub/static/* var/view_preprocessed/*"
+      args:
+        chdir: "{{ magento_source_path }}"
+      when: magento_mode != "production"

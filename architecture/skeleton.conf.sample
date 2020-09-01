@@ -1,0 +1,47 @@
+#!/bin/bash
+# This file is a sample file, it should be copied to skeleton.conf.
+# Once created, feel free to change the contents of the skeleton.conf file.
+###################
+# In this file you can:
+#   - add custom ansible confs with conditions (https://docs.ansible.com/ansible/latest/reference_appendices/config.html#environment-variables)
+#   - override default variables of the skeleton
+#   - add custom check scripts for all skeleton scripts
+# This file has to be versioned for everyone.
+
+#Used to force a prompt confirmation on these envs
+SKELETON_CRITICAL_ENVS="prod preprod staging"
+
+#Add proxy command for SmileOps team in prod and preprod
+for managed_smileops in prod preprod
+do
+    if [ "${inventory}" == "$managed_smileops" ]; then
+
+        BASTION_NUM=$(awk 'BEGIN{srand(); printf "%d\n",(rand()*3+1)}')
+        HOSTING_BASTION="b${BASTION_NUM}.vpn.ti.smile.fr"
+
+        BASTION_NUM=$(awk 'BEGIN{srand(); printf "%d\n",(rand()*1+1)}')
+        if [ $inventory != "prod" ]; then
+            PROJECT_BASTION=myproject-corenonprod-bastion${BASTION_NUM}.aws.smile.fr
+        else
+            PROJECT_BASTION=myproject-coreprod-bastion${BASTION_NUM}.aws.smile.fr
+        fi
+
+        SSH_VERSION=$(ssh -V 2>&1 | perl -0777 -pe 's/openssh(?: |_)([0-9.]+)?.*/\1/i')
+        if (( $(echo "$SSH_VERSION < 7.3" | bc -l) )); then
+          echo "ALERT! You should use OpenSSH version >= 7.3 for multiple SSH bastions jumps!"
+          echo "Version available since Stretch, Bionic, Fedora 25, RHEL 7"
+          echo ""
+          ANSIBLE_SSH_ARGS="$ANSIBLE_SSH_ARGS -o ProxyCommand=\"ssh -W %h:%p -q ${PROJECT_BASTION}\""
+        else
+          PROXYS=""
+          ping -c 1 -W 1 ${HOSTING_BASTION} > /dev/null
+          if [ $? -eq 0 ]; then
+              PROXYS=$PROXYS"${USER}@${HOSTING_BASTION},"
+          fi
+          PROXYS=$PROXYS"${PROJECT_BASTION}"
+          ANSIBLE_SSH_ARGS="$ANSIBLE_SSH_ARGS -o ProxyJump=\"${PROXYS}\""
+        fi
+        #ANSIBLE_SCP_IF_SSH="True"
+        break
+    fi
+done

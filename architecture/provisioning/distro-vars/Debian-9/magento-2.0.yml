@@ -1,0 +1,26 @@
+---
+# Vars for dbservers
+mysql_version: "5.7"
+mysql_flavor: percona
+mysql_log_slow_verbosity: "full"
+
+# Vars for searchservers
+es_java_version: 8
+
+# Vars for webservers
+ssl_default_certificate_key_file: "/etc/ssl/private/ssl-cert-snakeoil.key"
+ssl_default_certificate_file:     "/etc/ssl/certs/ssl-cert-snakeoil.pem"
+varnish_use_repo:     false
+varnish_main_version: "5"
+http_service_name: "apache2"
+http_user_name:    "www-data"
+http_group_name:   "www-data"
+php_ver:           "7.0"
+php_path:          "php"
+php_service_name:  "php7.0-fpm"
+php_extra_packages_required: []
+php_extra_packages_debug:    []
+redis_cli_package: "redis-tools"
+
+# Vars for ansible-npm
+nodejs_version: "10.16.3"

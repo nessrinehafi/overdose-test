@@ -1,0 +1,10 @@
+{{ magento_project_path }}/var/log/*.log {
+    rotate 12
+    weekly
+    compress
+    missingok
+    notifempty
+
+    create 664 {{ magento_project_user }} {{ magento_webserver_group }}
+    su {{ magento_project_user }} {{ magento_webserver_group }}
+}

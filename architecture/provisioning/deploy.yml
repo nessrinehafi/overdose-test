@@ -1,0 +1,241 @@
+---
+- hosts: webservers
+  any_errors_fatal: true
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+    first_install: "N"
+    setup_upgrade: "N"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+    # Check if version is provided
+    - name: "check 'deploy_version' var"
+      fail:
+        msg: "You must provide a 'deploy_version' variable in --extra-vars"
+      when: deploy_version is not defined
+      run_once: true
+
+    # Check the first_install parameter
+    - name: "check 'first_install' var"
+      fail:
+        msg: "The extra var 'first_install' accepts only Y or N as value"
+      when: first_install|upper != "Y" and first_install|upper != "N"
+      run_once: true
+
+    # Check the setup_upgrade parameter
+    - name: "check 'setup_upgrade' var"
+      fail:
+        msg: "The extra var 'setup_upgrade' accepts only Y or N as value"
+      when: setup_upgrade|upper != "Y" and setup_upgrade|upper != "N"
+      run_once: true
+
+    # Check the setup_upgrade parameter
+    - name: "check 'first_install' and 'setup_upgrade' consistency"
+      fail:
+        msg: "You can not set both 'first_install' and 'setup_upgrade' to Y"
+      when: first_install|upper == "Y" and setup_upgrade|upper == "Y"
+      run_once: true
+
+    - debug:
+        msg: "NOTICE : This is the first release. Magento is not yet installed."
+      when: first_install|upper == "Y"
+      run_once: true
+
+    - debug:
+        msg: "NOTICE : Setup upgrade will be executed. Magento will be put in maintenance mode."
+      when: setup_upgrade|upper == "Y"
+      run_once: true
+
+    # Initialize release process
+    - name: "Initialize the deploy root and gather facts"
+      deploy_helper:
+        path: "{{ magento_delivery_path }}"
+        release: "{{ deploy_version }}"
+
+    # Check release folder existence
+    - name: "Check if the release folder already exists"
+      stat:
+        path: "{{ deploy_helper.new_release_path }}"
+      register: release
+
+    - name: "Test if release folder already exist"
+      fail:
+        msg: "The release folder {{ deploy_helper.new_release_path }} already exists. Please provide another release or delete release folder."
+      when: release.stat.isdir is defined and release.stat.isdir
+
+    # Deploy from archive
+    - name: "Create the new release folder"
+      file:
+        path: "{{ deploy_helper.new_release_path }}"
+        state: directory
+
+    # Extract the archive
+    - name: "Extract the archive to the new release folder"
+      unarchive:
+        src: "{{ deploy_release_path }}"
+        dest: "{{ deploy_helper.new_release_path }}"
+
+    # Prepare the release
+    - name: "Add an unfinished file, to allow cleanup on successful finalize"
+      file:
+        path: "{{ deploy_helper.new_release_path }}/{{ deploy_helper.unfinished_filename }}"
+        state: touch
+
+    # Prepare shared folders
+    - include_tasks: includes/deploy-shared-folders-tasks.yml
+
+    # Prepare shared files
+    - include_tasks: includes/deploy-shared-files-tasks.yml
+
+    # Prepare data presents on NFS
+    - include_tasks: includes/deploy-shareds-on-nfs-tasks.yml
+      when: not nfs_mount_point is none and nfs_mount_point is exists
+
+    # Update permissions
+    - include_tasks: includes/permissions-tasks-full.yml
+      vars:
+        magento_project_path: "{{ deploy_helper.new_release_path }}"
+        magento_source_path: "{{ deploy_helper.new_release_path }}"
+      when: first_install|upper == "Y"
+
+    - include_tasks: includes/permissions-tasks-light.yml
+      vars:
+        magento_project_path: "{{ deploy_helper.new_release_path }}"
+        magento_source_path: "{{ deploy_helper.new_release_path }}"
+      when: first_install|upper == "N"
+
+    # Build env.php file on temporary redis database
+    - name: "Set up env.php configuration file (for setup upgrade)"
+      template:
+        src: "templates/magento/env.php.j2"
+        dest: "{{ deploy_helper.new_release_path }}/app/etc/env.php"
+        owner: "{{ magento_project_user }}"
+        group: "{{ magento_webserver_group }}"
+        mode: "u=rw,g=rw,o=r"
+      vars:
+        magento_cache_database: "{{ magento_cache_database_for_setup }}"
+
+    # We clean the temporary database, to avoid pb with old avorded setup
+    - name: "Clear Magento cache on temporary redis database"
+      command: "redis-cli -h {{ magento_cache_host }} -p {{ magento_cache_port }} -n {{ magento_cache_database_for_setup }} flushdb"
+      run_once: true
+      delegate_to: "{{ groups['webservers-main'][0] }}"
+
+    # Check Magento installation
+    - name: "Check if Magento sources exists"
+      stat:
+        path: "{{ php_path }} {{ magento_source_path }}/bin/magento"
+      register: magento_install
+
+    # Generate static and di on production
+    - include_tasks: includes/generate-static-di-tasks.yml
+      vars:
+        magento_source_path: "{{ deploy_helper.new_release_path }}"
+      when: first_install|upper == "N" and magento_mode == "production"
+
+
+    # Check setup upgrade
+    - include_tasks: includes/check-setup-tasks.yml
+      vars:
+        magento_source_path: "{{ deploy_helper.new_release_path }}"
+      run_once: true
+      delegate_to: "{{ groups['webservers-main'][0] }}"
+
+    # Fails if setup mandatory and setup parameters to false
+    - name: "Test if setup upgrade is mandatory"
+      fail:
+        msg: "WARNING : Setup upgrade is mandatory."
+      when: first_install|upper == "N" and setup_upgrade|upper == "N" and (magento_setup.stdout != "" or smile_setup.stdout != "")
+      run_once: true
+
+    # Warn if setup not mandatory and setup parameters to true
+    - debug:
+        msg: "WARNING : No setup to launch."
+      when: first_install|upper == "N" and setup_upgrade|upper == "Y" and magento_setup.stdout == "" and smile_setup.stdout == ""
+      run_once: true    # Set maintenance flag
+    - include_tasks: includes/set-maintenance-tasks.yml
+      vars:
+        maintenance_mode: "enable"
+        delivery_mode: true
+      when: first_install|upper == "N" and magento_install.stat.exists and (magento_setup.stdout != "" or smile_setup.stdout != "")
+
+    # On webservers-main
+    - block:
+
+        # Disable Magento 2 cron if we need to lauch setup upgrade
+        - include_tasks: includes/cron-task.yml
+          vars:
+            magento_cron_disabled: true
+
+        # Launch setup upgrade
+        - include_tasks: includes/setup-upgrade-tasks.yml
+          vars:
+            magento_source_path:    "{{ deploy_helper.new_release_path }}"
+            magento_cache_database: "{{ magento_cache_database_for_setup }}"
+
+      run_once: true
+      delegate_to: "{{ groups['webservers-main'][0] }}"
+      when: first_install|upper == "N" and (magento_setup.stdout != "" or smile_setup.stdout != "")
+
+    # Build env.php file on final redis database
+    - name: "Set up env.php configuration file (for run)"
+      template:
+        src: "templates/magento/env.php.j2"
+        dest: "{{ deploy_helper.new_release_path }}/app/etc/env.php"
+        owner: "{{ magento_project_user }}"
+        group: "{{ magento_webserver_group }}"
+        mode: "u=rw,g=rw,o=r"
+      vars:
+        magento_cache_database: "{{ magento_cache_database_for_run }}"
+
+    # We clean the temporary database, to clean memory
+    - name: "Clear Magento cache on final redis database"
+      command: "redis-cli -h {{ magento_cache_host }} -p {{ magento_cache_port }} -n {{ magento_cache_database_for_setup }} flushdb"
+      run_once: true
+      delegate_to: "{{ groups['webservers-main'][0] }}"
+
+    # We clean the run cache manually
+    - name: "Clear Magento cache on final redis database"
+      command: "redis-cli -h {{ magento_cache_host }} -p {{ magento_cache_port }} -n {{ magento_cache_database_for_run }} flushdb"
+      run_once: true
+      delegate_to: "{{ groups['webservers-main'][0] }}"
+
+    # Activate the release
+    - name: "Removing the unfinished file"
+      file:
+        path: "{{ deploy_helper.new_release_path }}/{{ deploy_helper.unfinished_filename }}"
+        state: absent
+
+    - name: "Switching the symlink"
+      deploy_helper:
+        path: "{{ magento_delivery_path }}"
+        release: "{{ deploy_helper.new_release }}"
+        state: finalize
+        keep_releases: "{{ deploy_keep_releases }}"
+
+    # On webservers-main
+    - block:
+
+        # Reactivate Magento 2 cron if previously disabled
+        - include_tasks: includes/cron-task.yml
+          vars:
+            magento_cron_disabled: false
+          when: first_install|upper == "N" and (magento_setup.stdout != "" or smile_setup.stdout != "")
+
+      run_once: true
+      delegate_to: "{{ groups['webservers-main'][0] }}"
+
+    # Clean OpCache (symlink bug)
+    - name: "Clean OpCache - FPM"
+      command: "sudo systemctl reload {{ php_service_name }}.service"
+      when: magento_php_mode == "fpm"
+
+    - name: "Clean OpCache - Apache"
+      command: "sudo systemctl reload {{ http_service_name }}.service"
+      when: magento_php_mode != "fpm"
+
+    # Clear the cache
+    - include_tasks: includes/cache-clean-tasks.yml
+      when: first_install|upper == "N"

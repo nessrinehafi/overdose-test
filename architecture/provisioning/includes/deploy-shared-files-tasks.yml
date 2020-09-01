@@ -1,0 +1,3 @@
+# Create all the shared files
+- include_tasks: deploy-shared-file-tasks.yml
+  with_items: "{{ deploy_shared_files|default([]) }}"

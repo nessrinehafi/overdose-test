@@ -1,0 +1,12 @@
+# Vars for Magento
+magento_hostname:          "{{ magento_project_name }}-staging.clients.smile.fr"
+magento_project_path:      "{{ magento_delivery_path }}/current"
+magento_source_path:       "{{ magento_project_path }}"
+magento_mode:              "developer"
+
+# Vars for ansible-basicserver
+promptcolor: blue
+
+# Vars for ansible-mysql
+magento_mysql_config_innodb_buffer_pool_size: 2G
+magento_mysql_use_binlog: 0

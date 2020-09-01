@@ -1,0 +1,16 @@
+- name: "Prepare for PHP mode [fpm]"
+  set_fact:
+    php_mode:               "fpm"
+    apache2_modules:        "{{ apache2_modules + ['proxy_fcgi'] }}"
+  when: magento_php_mode == 'fpm'
+
+- name: "Prepare for PHP mode [apache2]"
+  set_fact:
+    php_mode:               "apache2"
+    apache2_modules:        "{{ apache2_modules + ['php{{ php_ver }}'] }}"
+  when: magento_php_mode != 'fpm'
+
+- name: Add php-mcrypt extension if Magento < 2.3
+  set_fact:
+    php_extension_modules_required: "{{ php_extension_modules_required }} + ['mcrypt']"
+  when: magento_version is version_compare('2.3.0', '<')

@@ -1,0 +1,32 @@
+- name: "Put site in maintenance"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  command: "{{ php_path }} bin/magento maintenance:enable"
+  args:
+    chdir: "{{ magento_source_path }}"
+  when: maintenance_mode == "enable"
+
+- name: "Enable ips to access site while maintenance"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  command: "{{ php_path }} bin/magento maintenance:allow-ips {{ magento_maintenance_allowed_ips | join (' ') }}"
+  args:
+    chdir: "{{ magento_source_path }}"
+  when: maintenance_mode == "enable" and not delivery_mode
+
+- name: "Disable maintenance"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  command: "{{ php_path }} bin/magento maintenance:disable"
+  args:
+    chdir: "{{ magento_source_path }}"
+  when: maintenance_mode == "disable"
+
+- name: "Disable ips to access site while maintenance"
+  file:
+    path: "{{ magento_source_path }}/var/.maintenance.ip"
+    state: absent
+  when: maintenance_mode == "disable"

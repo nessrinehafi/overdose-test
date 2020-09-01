@@ -1,0 +1,52 @@
+---
+- hosts: webservers
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+    - name: "Please, close your PHPStorm"
+      pause:
+
+    - name: "Check if .idea/misc.xml exists"
+      stat:
+        path: "{{ magento_project_path }}/.idea/misc.xml"
+      register: idea_misc
+
+    - name: "Create .idea/misc.xml 1/2"
+      file:
+        path: "{{ magento_project_path }}/.idea/misc.xml"
+        state: touch
+      when: not idea_misc.stat.exists
+
+    - name: "Create .idea/misc.xml 2/2"
+      lineinfile:
+        dest: "{{ magento_project_path }}/.idea/misc.xml"
+        state: present
+        insertafter: EOF
+        line: '<?xml version="1.0" encoding="UTF-8"?><project version="4" />'
+      when: not idea_misc.stat.exists
+
+    - name: "Chmod of .idea/misc.xml : 666"
+      file:
+        path: "{{ magento_project_path }}/.idea/misc.xml"
+        mode: "u=rw,g=rw,o=rw"
+
+    - name: "Generate the URN catalog"
+      become: yes
+      become_method: sudo
+      become_user: "{{ magento_webserver_user }}"
+      shell: "{{ php_path }} {{ magento_source_path }}/bin/magento dev:urn-catalog:generate {{ magento_project_path }}/.idea/misc.xml"
+
+    - name: "Chmod of .idea/misc.xml : 664"
+      file:
+        path: "{{ magento_project_path }}/.idea/misc.xml"
+        mode: "u=rw,g=rw,o=r"
+
+    - name: "Replace lxc path"
+      replace:
+        dest: "{{ magento_project_path }}/.idea/misc.xml"
+        regexp: '"{{ magento_project_path }}/'
+        replace: '"$PROJECT_DIR$/'

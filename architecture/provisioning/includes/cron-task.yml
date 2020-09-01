@@ -1,0 +1,13 @@
+- set_fact:
+    magento_cron_action: "{{ 'Disable' if magento_cron_disabled else 'Enable' }}"
+
+- name: "{{ magento_cron_action }} Magento 2 Cron"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  cron:
+    name:   "Magento Cron Run"
+    minute: "*/{{ magento_cron_every_minutes }}"
+    hour:   "*"
+    job:    "{{ magento_cronjob }}"
+    disabled: "{{ magento_cron_disabled }}"

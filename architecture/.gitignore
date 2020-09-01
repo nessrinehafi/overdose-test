@@ -1,0 +1,22 @@
+# IDEs
+/.idea
+/.buildpath
+/.cache
+/.metadata
+/.project
+/.settings
+/.gitattributes
+/.retry
+/nbproject
+/sitemap
+
+# Python compiled files
+**.pyc
+
+# Provisioning
+/provisioning/roles/*
+/provisioning/*.retry
+/docs/manual/*.pdf
+
+# Pipenv
+/.venv

@@ -1,0 +1,48 @@
+[proxyservers-preprod]
+preprod-front1 ansible_ssh_host="{{ magento_project_name }}-pp.front.smile-hosting.fr"
+
+[webservers-preprod-main]
+preprod-front1 ansible_ssh_host="{{ magento_project_name }}-pp.front.smile-hosting.fr"
+
+[webservers-preprod-others]
+
+[dbservers-preprod]
+preprod-db1    ansible_ssh_host="{{ magento_project_name }}-pp.db.smile-hosting.fr"
+
+[cacheservers-preprod]
+preprod-db1    ansible_ssh_host="{{ magento_project_name }}-pp.db.smile-hosting.fr"
+
+[searchservers-preprod]
+preprod-db1    ansible_ssh_host="{{ magento_project_name }}-pp.db.smile-hosting.fr"
+
+[proxyservers:children]
+proxyservers-preprod
+
+[webservers-preprod:children]
+webservers-preprod-main
+webservers-preprod-others
+
+[webservers-main:children]
+webservers-preprod-main
+
+[webservers-others:children]
+webservers-preprod-others
+
+[webservers:children]
+webservers-preprod
+
+[cacheservers:children]
+cacheservers-preprod
+
+[dbservers:children]
+dbservers-preprod
+
+[searchservers:children]
+searchservers-preprod
+
+[preprod:children]
+proxyservers-preprod
+webservers-preprod
+cacheservers-preprod
+dbservers-preprod
+searchservers-preprod

@@ -1,0 +1,18 @@
+---
+- hosts: webservers-main
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+    - name: "Execute Grunt Shell with [{{ grunt_params }}] params"
+      shell: "grunt {{ grunt_params }}"
+      register: result
+      args:
+        chdir: "{{ magento_source_path }}"
+
+    - name: "Execute Grunt Shell - result"
+      debug:
+        var: "result.stdout_lines  + [ result.stderr ]"

@@ -1,0 +1,87 @@
+---
+- hosts: webservers-main
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+    - include_tasks: includes/cron-task.yml
+      vars:
+        magento_cron_disabled: true
+
+    - name: "Set permissions"
+      include_tasks: includes/permissions-tasks-light.yml
+
+    - name: "Set up env.php configuration file"
+      template:
+        src:   "templates/magento/env_install.php.j2"
+        dest:  "{{ magento_source_path }}/app/etc/env.php"
+        owner: "{{ magento_project_user }}"
+        group: "{{ magento_webserver_group }}"
+        mode:  "u=rw,g=rw,o=r"
+      vars:
+        magento_cache_database: "{{ magento_cache_database_for_run }}"
+
+    - name: "Clear Magento DI and Generation (< 2.2)"
+      become: yes
+      become_method: sudo
+      become_user: "{{ magento_webserver_user }}"
+      shell: "rm -rf var/di/* var/generation/*"
+      args:
+        chdir: "{{ magento_source_path }}"
+      when: magento_version is version_compare('2.2.0', '<')
+
+    - name: "Clear Magento DI and Generation (>= 2.2)"
+      become: yes
+      become_method: sudo
+      become_user: "{{ magento_webserver_user }}"
+      shell: "rm -rf generated/*"
+      args:
+        chdir: "{{ magento_source_path }}"
+      when: magento_version is version_compare('2.2.0', '>=')
+
+    - name: "Install Magento 2"
+      become: yes
+      become_method: sudo
+      become_user: "{{ magento_webserver_user }}"
+      command: "{{ php_path }} {{ magento_source_path }}/bin/magento setup:install
+      --admin-firstname={{ magento_admin_firstname }}
+      --admin-lastname={{ magento_admin_lastname }}
+      --admin-email={{ magento_admin_email }}
+      --admin-user={{ magento_admin_user }}
+      --admin-password={{ magento_admin_password }}
+      --backend-frontname={{ magento_backend_frontname }}
+      --db-host={{ magento_db_host }}
+      --db-name={{ magento_db_name }}
+      --db-user={{ magento_db_user }}
+      --db-password={{ magento_db_password }}
+      --base-url=http://{{ magento_hostname }}/
+      --base-url-secure=https://{{ magento_hostname }}/
+      --use-secure={{ magento_secure_frontend }}
+      --use-secure-admin={{ magento_secure_backend }}
+      --use-rewrites={{ magento_use_rewrites }}
+      --currency={{ magento_currency }}
+      --language={{ magento_language }}
+      --timezone={{ magento_timezone }}
+      --cleanup-database
+      --magento-init-params=\"MAGE_MODE={{ magento_mode }}\"
+      -vvv"
+      args:
+        chdir: "{{ magento_source_path }}"
+
+    - name: "Set up env.php configuration file with appropriate date and encryption key (for reinstallation)"
+      template:
+        src:   "templates/magento/env.php.j2"
+        dest:  "{{ magento_source_path }}/app/etc/env.php"
+        owner: "{{ magento_project_user }}"
+        group: "{{ magento_webserver_group }}"
+        mode:  "u=rw,g=rw,o=r"
+      vars:
+        magento_cache_database: "{{ magento_cache_database_for_run }}"
+      when: magento_install_date and magento_crypt_key
+
+    - include_tasks: includes/cron-task.yml
+      vars:
+        magento_cron_disabled: false

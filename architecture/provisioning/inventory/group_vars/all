@@ -1,0 +1,159 @@
+# Vars for this Project
+magento_project_name:       pagebuilder
+magento_version:            2.3.3
+magento_install_date:
+magento_crypt_key:
+deploy_release_path:        "../../build/dist/{{ magento_project_name }}-magento-{{ deploy_version }}.tar.gz"
+delivery_authorized_smile_users:
+  - ivsav
+delivery_authorized_extra_keys: []
+
+# Vars for Magento Skeleton
+magento_delivery_path:      "/var/www/{{ magento_project_name }}"
+magento_project_path:       "{{ magento_delivery_path }}"
+magento_source_path:        "{{ magento_project_path }}"
+magento_hostname:           "www.{{ magento_project_name }}.com"
+magento_server_alias:       []
+magento_project_user:       smile
+magento_project_group:      root
+magento_delivery_groups:    adm
+magento_webserver_user:     "{{ http_user_name }}"
+magento_webserver_group:    "{{ http_group_name }}"
+magento_mode:               "production"
+magento_profiler:           Off
+magento_profiler_type:      html
+magento_php_display_errors: Off
+magento_php_error_reporting: E_ALL
+magento_admin_firstname:    "{{ magento_project_name }}"
+magento_admin_lastname:     "{{ magento_project_name }}"
+magento_admin_email:        "{{ magento_project_name }}@smile.fr"
+magento_admin_user:         admin
+magento_admin_password:     magent0
+magento_backend_frontname:     admin
+magento_backend_redirect_host: myfront1
+magento_secure_frontend:    0
+magento_secure_backend:     0
+magento_db_host:            mydb
+magento_db_name:            "{{ magento_project_name }}"
+magento_db_table_prefix:
+magento_db_user:            "{{ magento_project_name }}"
+magento_db_password:        "{{ magento_project_name }}"
+magento_use_rewrites:       1
+magento_currency:           EUR
+magento_language:           en_US
+magento_timezone:           Europe/Paris
+magento_cronjob:            "{{ php_path }} {{ magento_source_path }}/bin/magento cron:run >> {{ magento_source_path }}/var/log/magento.cron.log"
+magento_cron_every_minutes: 1
+magento_use_cdn:            false
+
+magento_stack_use_proxy_proto: false
+magento_stack_use_nginx_offloader: true
+# Possible values : alone, dynamic, webservers
+magento_varnish_backend_type: alone
+magento_php_mode:          fpm
+
+# Magento cache id prefix must match [a-zA-Z0-9_]
+magento_cache_id_prefix:          "{{ magento_project_name|replace('-','') }}_"
+magento_cache_host:               myredis
+magento_cache_port:               6379
+magento_cache_database_for_run:   0
+magento_cache_database_for_setup: 1
+magento_cache_session_host:       myredis
+magento_cache_session_port:       6380
+magento_cache_session_database:   0
+magento_cache_proxy_port: "{% if magento_stack_use_nginx_offloader %}81{% else %}80{% endif %}"
+
+magento_http_cache_hosts:
+  - host: myproxy1
+    port: "{{ magento_cache_proxy_port }}"
+
+magento_deploy_di_logs_path:             "/tmp/magento_deploy_di.log"
+magento_deploy_static_content_logs_path: "/tmp/magento_deploy_static_content.log"
+magento_maintenance_allowed_ips: []
+
+magento_install_grunt:      false
+magento_install_maildev:    false
+magento_install_newrelic:   false
+
+magento_enable_swagger: false
+
+# Vars for delivery playbook
+deploy_shared_folders:
+  - pub/media
+  - pub/static/_cache
+  - var/log
+  - var/report
+  - var/importexport
+  - var/import_history
+
+nfs_mount_point:
+nfs_shared_folder_name: shared
+shared_on_nfs:
+  - var/importexport
+  - var/import_history
+  - pub/media
+  - pub/static/_cache
+
+deploy_shared_files: []
+
+# For static content generation
+deploy_languages:
+    - en_US
+
+# Delivery user
+delivery_authorized_users: "{{ delivery_authorized_smile_users }}"
+deploy_keep_releases: 3
+
+# Hosts to prepare in the /etc/hosts file
+specific_hosts:
+  - myproxy1
+  - myfront1
+  - mydb
+  - myredis
+  - myelasticsearch
+
+# Vars for ansible-mysql-server
+magento_mysql_config_innodb_buffer_pool_size: 4G
+magento_mysql_use_binlog: 1
+
+# Vars for ansible-elasticsearch
+magento_es_plugins:
+  - "analysis-phonetic"
+  - "analysis-icu"
+
+magento_es_config_other:
+  network.bind_host:     0
+  bootstrap.memory_lock: "false"
+
+# Vars for ansible-varnish
+magento_front_list:
+  - "myfront1"
+
+magento_varnish_enable_protection: "none"
+magento_varnish_basic_auth:        ""
+magento_varnish_memory_mb:         64
+magento_varnish_client:            []
+magento_webservers_port: "{% if magento_varnish_backend_type == 'alone' %}82{% else %}80{% endif %}"
+
+# Vars for ansible-basicserver
+# Use one var per host group, because Ansible cannot merge variables declared in multiple inventories
+extra_packages: "{{ extra_packages_proxyservers | default([]) + extra_packages_webservers | default([]) + extra_packages_dbservers | default([]) + extra_packages_cacheservers | default([])  + extra_packages_searchservers | default([]) }}"
+
+# Vars for ansible-nginx
+magento_ssl_certificate_key_file: "{{ ssl_default_certificate_key_file }}"
+magento_ssl_certificate_file:     "{{ ssl_default_certificate_file }}"
+
+# Vars for ansible-php
+magento_php_extra_packages:    "{{ php_extra_packages_required }}"
+magento_php_extension_modules: "{{ php_extension_modules_required }}"
+magento_php_settings_all:      "{{ php_settings_required }}"
+
+# Vars for ansible-newrelic
+newrelic_license_key: ""
+newrelic_appname: "{{ magento_project_name }}-"
+newrelic_plugins:
+  - php
+# PHP plugin
+newrelic_php_enable: true
+newrelic_php_logfile: /var/log/newrelic/php_agent.log
+newrelic_php_loglevel: error

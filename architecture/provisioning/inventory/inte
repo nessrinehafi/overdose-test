@@ -1,0 +1,48 @@
+[proxyservers-inte]
+inte-server ansible_ssh_host="{{ magento_project_name }}.vitry.intranet"
+
+[webservers-inte-main]
+inte-server ansible_ssh_host="{{ magento_project_name }}.vitry.intranet"
+
+[webservers-inte-others]
+
+[dbservers-inte]
+inte-server ansible_ssh_host="{{ magento_project_name }}.vitry.intranet"
+
+[cacheservers-inte]
+inte-server ansible_ssh_host="{{ magento_project_name }}.vitry.intranet"
+
+[searchservers-inte]
+inte-server ansible_ssh_host="{{ magento_project_name }}.vitry.intranet"
+
+[proxyservers:children]
+proxyservers-inte
+
+[webservers-inte:children]
+webservers-inte-main
+webservers-inte-others
+
+[webservers-main:children]
+webservers-inte-main
+
+[webservers-others:children]
+webservers-inte-others
+
+[webservers:children]
+webservers-inte
+
+[cacheservers:children]
+cacheservers-inte
+
+[dbservers:children]
+dbservers-inte
+
+[searchservers:children]
+searchservers-inte
+
+[inte:children]
+proxyservers-inte
+webservers-inte
+cacheservers-inte
+dbservers-inte
+searchservers-inte

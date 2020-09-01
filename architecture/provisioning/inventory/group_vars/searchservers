@@ -1,0 +1,11 @@
+# Vars for ansible-basicserver
+extra_packages_searchservers: []
+
+# Vars for ansible-elasticsearch
+es_version:       "6.8.3"
+es_cluster_name:  "{{ magento_project_name }}"
+es_logger_action: "WARN"
+
+es_config_other: "{{ magento_es_config_other }}"
+
+es_plugins: "{{ magento_es_plugins }}"

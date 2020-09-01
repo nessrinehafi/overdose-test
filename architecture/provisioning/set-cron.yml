@@ -1,0 +1,22 @@
+---
+- hosts: webservers-main
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - name: "Test if the status var is given"
+      fail:
+        msg: "You must provide a 'status' variable in --extra-vars"
+      when: status is not defined or status == ""
+
+    - name: "Test if the status is equal to enable or disable"
+      fail:
+        msg: "'status' must equals to 'enable' or 'disable'."
+      when: status != "enable" and status != "disable"
+
+    - include_tasks: includes/include-vars.yml
+
+    - include_tasks: includes/cron-task.yml
+      vars:
+        magento_cron_disabled: "{{ true if status == \"disable\" else false }}"

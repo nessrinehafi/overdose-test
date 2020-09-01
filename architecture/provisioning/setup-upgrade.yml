@@ -1,0 +1,14 @@
+---
+- hosts: webservers-main
+
+  vars:
+    ansible_user: "{{ magento_project_user }}"
+
+  tasks:
+    - include_tasks: includes/include-vars.yml
+
+    - include_tasks: includes/permissions-tasks-light.yml
+
+    - include_tasks: includes/setup-upgrade-tasks.yml
+      vars:
+        magento_cache_database: "{{ magento_cache_database_for_run }}"

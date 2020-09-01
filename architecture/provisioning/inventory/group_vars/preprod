@@ -1,0 +1,19 @@
+# Vars for Magento
+magento_hostname:          "{{ magento_project_name }}-pp.smile-hosting.fr"
+magento_project_path:      "{{ magento_delivery_path }}/current"
+magento_source_path:       "{{ magento_project_path }}"
+magento_mode:              "production"
+
+# Vars for ansible-basicserver
+promptcolor: green
+
+# Vars for ansible-varnish
+magento_varnish_enable_protection: "all"
+magento_varnish_basic_auth:        "XXXXXXXXXXXXXXXXXXXXXXX="
+magento_varnish_memory_mb:         256
+
+# Vars for ansible-elasticsearch
+magento_es_config_other:
+  network.bind_host:     0
+  bootstrap.memory_lock: "false"
+  path.repo:             "\"/home/backup/local/elastic/\""

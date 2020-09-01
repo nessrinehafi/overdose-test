@@ -1,0 +1,17 @@
+  .port               = "{{ varnish_backend_port }}";
+  .connect_timeout    = {{ varnish_backend_connect_timeout }};
+  .first_byte_timeout = {{ varnish_backend_first_byte_timeout }};
+  {% if varnish_version is version_compare('5', '>=') and varnish_use_proxy_proto_version > 0 %}
+  # SMILE - add proxy protocol capability to improve network connections in stack
+  .proxy_header = {{ varnish_use_proxy_proto_version }};
+  {% endif %}
+  {% if magento_version is version_compare('2.2.0', '>=') %}
+  .probe = {
+      # SMILE - use magento healthcheck variable to be consistent into VCL
+      .url = "{{ magento_healthcheck_probe }}";
+      .timeout = 2s;
+      .interval = 5s;
+      .window = 10;
+      .threshold = 5;
+  }
+  {% endif %}

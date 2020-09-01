@@ -1,0 +1,64 @@
+- name: "Prepare for Magento Setup parameters [default]"
+  set_fact:
+    setup_upgrade_parameters: ""
+  when: magento_mode == 'default'
+
+- name: "Prepare for Magento Setup parameters [developer]"
+  set_fact:
+    setup_upgrade_parameters: ""
+  when: magento_mode == 'developer'
+
+- name: "Prepare for Magento Setup parameters [production]"
+  set_fact:
+    setup_upgrade_parameters: "--keep-generated"
+  when: magento_mode == 'production'
+
+- name: "Clear Magento cache (before upgrade)"
+  command: "redis-cli -h {{ magento_cache_host }} -p {{ magento_cache_port }} -n {{ magento_cache_database }} flushdb"
+
+- name: "Upgrade Magento Setup"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  command: "{{ php_path }} bin/magento setup:upgrade {{ setup_upgrade_parameters }}"
+  register: result_setup_magento
+  args:
+    chdir: "{{ magento_source_path }}"
+
+- name: "Upgrade Magento Setup - result"
+  debug:
+    var: result_setup_magento.stdout_lines
+
+- name: "Verify if Smile Setup is enabled"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  shell: "{{ php_path }} bin/magento module:status | sed -n  '/enabled/,$p' | sed -n  '0,/disabled/p' | grep 'Smile_Setup'"
+  args:
+    chdir: "{{ magento_source_path }}"
+  register: check_smilesetup
+  changed_when: false
+  failed_when: false
+
+- name: "Execute New Smile Setup Files"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  command: "{{ php_path }} bin/magento smilesetup:execute-all"
+  args:
+    chdir: "{{ magento_source_path }}"
+  register: result_setup_smile
+  when: check_smilesetup.stdout
+
+- name: "Execute New Smile Setup Files - result"
+  debug:
+    var: result_setup_smile.stdout_lines
+  when: check_smilesetup.stdout
+
+- name: "Clear Magento cache (after upgrade)"
+  become: yes
+  become_method: sudo
+  become_user: "{{ magento_webserver_user }}"
+  command: "{{ php_path }} bin/magento cache:clean"
+  args:
+    chdir: "{{ magento_source_path }}"

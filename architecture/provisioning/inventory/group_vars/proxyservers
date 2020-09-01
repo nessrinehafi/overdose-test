@@ -1,0 +1,63 @@
+# Vars for ansible-basicserver
+install_sudoers: true
+sudo_allowed_users:
+  - "{{ magento_webserver_user }}"
+sudo_allowed_root_commands:
+  - "/bin/systemctl status nginx.service"
+  - "/bin/systemctl status varnish.service"
+extra_packages_proxyservers:
+  - curl
+  - gcc
+
+# Vars for ansible-varnish
+varnish_memory_mb:      "{{ magento_varnish_memory_mb }}"
+varnish_vcl_name:       "{{ magento_project_name }}"
+varnish_port:           "{{ magento_cache_proxy_port }}"
+
+varnish_vcl_template:   "templates/varnish/magento_vcl.j2"
+varnish_backend_dynamic_template: "templates/varnish/dynamic_director_vcl.j2"
+varnish_backend_host:               "127.0.0.1"
+varnish_backend_port:               "{{ magento_webservers_port }}"
+varnish_backend_name:               "magento"
+varnish_backend_connect_timeout:    "3.5s" # Default varnish value: 3.5s
+varnish_backend_first_byte_timeout: "60s"  # Default varnish value:  60s
+
+varnish_enable_protection: "{{ magento_varnish_enable_protection }}"
+varnish_basic_auth:        "{{ magento_varnish_basic_auth }}"
+
+varnish_front_local:
+  - localhost
+
+varnish_purge: "{{ varnish_front_local + magento_front_list }}"
+varnish_admin: "{{ varnish_front_local + magento_front_list }}"
+
+varnish_client: "{{ magento_varnish_client }}"
+
+# Vars for ansible-nginx
+nginx_use_ssl:  true
+nginx_port: 80
+nginx_ssl_port: 443
+nginx_use_http2: false
+
+nginx_disabled_default:
+  - "default"
+
+nginx_vhosts:
+  magentosslvhost:
+    template:                   templates/nginx/magento_vhost.j2
+    vhost_name:                 "{{ magento_project_name }}-ssl"
+    server_name:                "{{ magento_hostname }}"
+    server_aliases:             "{{ magento_server_alias }}"
+    redirect_host:              "127.0.0.1"
+    redirect_port:              "{{ magento_cache_proxy_port }}"
+    admin_url:                  "{{ magento_backend_frontname }}"
+    admin_redirect_host:        "{{ magento_backend_redirect_host }}"
+    admin_redirect_port:        "{{ magento_cache_proxy_port }}"
+    override_x_forwarded_for:   True
+    override_x_forwarded_proto: True
+    ssl:
+        enabled:                True
+        certificate_key_file:   "{{ magento_ssl_certificate_key_file }}"
+        certificate_file:       "{{ magento_ssl_certificate_file }}"
+    document_root:          "{{ magento_source_path }}"
+    create_document_root:   false

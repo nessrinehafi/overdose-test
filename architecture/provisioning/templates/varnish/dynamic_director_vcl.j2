@@ -1,0 +1,8 @@
+{# Use shell vars $be for backend name and $ip for backend IP #}
+{% set magento_pub_dir = 'pub/' %}
+{% if magento_mode == 'production' %}{% set magento_pub_dir = '' %}{% endif %}
+{% set magento_healthcheck_probe = '/'+ magento_pub_dir +'health_check.php' %}
+backend $be {
+    .host = "$ip";
+    {% include 'templates/varnish/partial_backend_conf.j2' %}
+}
